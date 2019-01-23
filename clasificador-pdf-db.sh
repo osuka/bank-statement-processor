@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Command line:
-# pdf2txt.py -Y loose -A correspondencia.pdf
-
 # virtualenv --python=python3 venv
 # source venv/bin/activate
 # pip install -r requirements.txt
@@ -10,7 +7,7 @@
 
 TMPFILE="/tmp/procesar-tmp.txt"
 
-for DOC in *.pdf; do
+for DOC in corresp*.pdf; do
 
   TYPE="error"
   DATE="NOTFOUND"
@@ -32,26 +29,7 @@ for DOC in *.pdf; do
     fi
 
     # posibles formas de fecha
-
     DATE="`cat ${TMPFILE} | tr '\n' '|' | sed -n 's/.*FECHA[|]*OFICINA[|]*\(..\)\.\(..\)\.\(....\).*/\3.\2.\1/gp'`"
-    if [ "$DATE" == "" ]; then
-      DATE="`cat ${TMPFILE} | sed -n 's/\(20[0-3][0-9]\)\([01][0-9]\)\([0-3][0-9]\)/\1.\2.\3/gp'`"
-    fi
-    if [ "$DATE" == "" ]; then
-      DATE="`cat ${TMPFILE} | tr '\n' ' ' | sed -n 's/.*DATA[ ]*REF\.[ ]*CONCEPTE[ ]*\(..\)\.\(..\)\.\(....\).*/\3.\2.\1/gp'`"
-    fi
-    if [ "$DATE" == "" ]; then
-      DATE="`cat ${TMPFILE} | tr '\n' ' ' | sed -n 's/.*DATA[ ]*OFICINA[ ]*\(..\)\.\(..\)\.\(....\).*/\3.\2.\1/gp'`"
-    fi
-    if [ "$DATE" == "" ]; then
-      DATE="`cat ${TMPFILE} | tr '\n' ' ' | sed -n 's/.*DATA[ ]*OFICINA[ ]*N.[ ]*PRÉSTEC[ ]*\(..\)\.\(..\)\.\(....\).*/\3.\2.\1/gp'`"
-    fi
-    if [ "$DATE" == "" ]; then
-      DATE="`cat ${TMPFILE} | tr '\n' ' ' | sed -n 's/.*FECHA[ ]*OFICINA[ ]*TELF.[ ]*CUENTA CLIENTE (IBAN)[ ]*\(..\)\.\(..\)\.\(....\).*/\3.\2.\1/gp'`"
-    fi
-    if [ "$DATE" == "" ]; then
-      DATE="`cat ${TMPFILE} | tr '\n' ' ' | sed -n 's/.*POSICIÓ GLOBAL A \(..\)\/\(..\)\/\(....\).*/\3.\2.\1/gp'`"
-    fi
     if [ "$DATE" == "" ]; then
       DATE="`cat ${TMPFILE} | tr '\n' ' ' | sed -n 's/.*DATA,[ ]*\(..\)\.\(..\)\.\(....\).*/\3.\2.\1/gp'`"
     fi
@@ -59,17 +37,39 @@ for DOC in *.pdf; do
       DATE="`cat ${TMPFILE} | tr '\n' ' ' | sed -n 's/DATA[ ]*\(..\)\.\(..\)\.\(..\).*/20\3.\2.\1/gp'`"
     fi
     if [ "$DATE" == "" ]; then
+      DATE="`cat ${TMPFILE} | tr '\n' ' ' | sed -n 's/.*DATA[ ]*OFICINA[ ]*\(..\)\.\(..\)\.\([0-9][0-9][0-9][0-9]\).*/\3.\2.\1/gp'`"
+    fi
+    if [ "$DATE" == "" ]; then
+      DATE="`cat ${TMPFILE} | tr '\n' ' ' | sed -n 's/.*DATA[ ]*OFICINA[ ]*\([0-9][0-9]\)\.\([0-9][0-9]\)\.\([0-9][0-9]\).*/20\3.\2.\1/gp'`"
+    fi
+    if [ "$DATE" == "" ]; then
+      DATE="`cat ${TMPFILE} | tr '\n' ' ' | sed -n 's/.*DATA[ ]*OFICINA[ ]*N.[ ]*PRÉSTEC[ ]*\(..\)\.\(..\)\.\(....\).*/\3.\2.\1/gp'`"
+    fi
+    if [ "$DATE" == "" ]; then
+      DATE="`cat ${TMPFILE} | tr '\n' '|' | sed -n 's/.*FECHA[|]*OFICINA[|]*TELF.[|]*CUENTA CLIENTE (IBAN)[|]*\(..\)\.\(..\)\.\(....\).*/\3.\2.\1/gp'`"
+    fi
+    if [ "$DATE" == "" ]; then
+      DATE="`cat ${TMPFILE} | tr '\n' ' ' | sed -n 's/.*DATA[ ]*OFICINA[ ]*TELF.[ ]*\(..\)\.\(..\)\.\(....\).*/\3.\2.\1/gp'`"
+    fi
+    if [ "$DATE" == "" ]; then
+      DATE="`cat ${TMPFILE} | tr '\n' ' ' | sed -n 's/.*POSICIÓ GLOBAL A \(..\)\/\(..\)\/\(....\).*/\3.\2.\1/gp'`"
+    fi
+    if [ "$DATE" == "" ]; then
       DATE="`cat ${TMPFILE} | tr '\n' ' ' | sed -n 's/.*VALOR[ ]*\(..\)\.\(..\)\.\(..\).*/20\3.\2.\1/gp'`"
     fi
     if [ "$DATE" == "" ]; then
-      DATE="`cat ${TMPFILE} | sed -n 's/\(20[0-3][0-9]\)\([01][0-9]\)\([0-3][0-9]\)/\1.\2.\3/gp'`"
+      DATE="`cat ${TMPFILE} | sed -n 's/\(20[0-3][0-9]\)\([01][0-9]\)\([0-3][0-9]\)/NEEDS CHECK \1.\2.\3/gp'`"
     fi
 
     # posibles textos conocidos
 
     if grep -s "ADEUDO POR DOMICILIACIÓN SEPA" ${TMPFILE} >/dev/null ; then
       TYPE="adeudo"
+      TITULAR="`cat ${TMPFILE} | tr '\n' '|' | sed -n 's/.*TITULAR DOMICILIACIÓN[|]*\([A-Z]*\).*/\1/gp'`"
       EXTRA="`cat ${TMPFILE} | tr '\n' '|' | sed -n 's/.*ORDENANTE[|]*\([ñÑáéíóúÁÉÍÓ\.,ÚA-Za-z0-9 -]*\).*/\1/gp'`"
+      if [ "$TITULAR" != "" ]; then
+        EXTRA="${EXTRA} ${TITULAR}"
+      fi
     elif grep -s "INFORMACIÓ SOBRE ELS PERFILS DELS SEUS PRODUCTES" ${TMPFILE} >/dev/null ; then
       TYPE="info-perfiles"
     elif grep -s "EXTRACTO CUENTA NOMINA BANCA ASOCIADA DB" ${TMPFILE} >/dev/null ; then
@@ -119,6 +119,13 @@ for DOC in *.pdf; do
     if [ "$HOJA" != "" ]; then
       HOJA=" $HOJA"
     fi
-    echo "$DOC: $DATE $TYPE$EXTRA$HOJA"
+    NAME="$DATE $TYPE$EXTRA$HOJA db.pdf"
+    NAME="`echo $NAME | awk '{print tolower($0)}'`"
+    if [ -f "$NAME" ]; then
+      echo "$DOC: Can't copy to $NAME as it already exists"
+    else
+      cp "$DOC" "$NAME"
+      mv "$DOC" "$DOC.processed"
+    fi
   fi
 done
