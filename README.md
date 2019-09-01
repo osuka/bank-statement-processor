@@ -1,6 +1,12 @@
 
 # Setup
 
+pdfminer.six:
+  https://github.com/pdfminer/pdfminer.six
+
+  updated version of pdfminer
+
+
 Estos scripts utilizan pdf2txt.py que se incluye con la distribucion de pdfmine.py. Concretamente usamos el fork para python3 del producto.
 
 ```bash
