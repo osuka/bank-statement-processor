@@ -17,6 +17,16 @@ def find_starting_with(lines, prefix):
     return None
 
 
+def find_containing(lines, text):
+    """finds inside array of strings the first one that contains the given
+    string
+    """
+    for line in lines:
+        if text in line:
+            return line
+    return None
+
+
 def find_after(lines, text):
     """finds inside an array of strings the string that immediately follows
     an entry exactly like "text"

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 class Bank(Enum):
     """ Known bank providers """
 
-    UNKNOWN = "unknown"
+    UNKNOWN = "UNKNOWN"
     DEUTSCHE_BANK = "db"
     SANTANDER_UK = "santanderuk"
     MONZON = "monzo"
@@ -21,14 +21,17 @@ class Bank(Enum):
 class Classification(Enum):
     """ Known document subjects """
 
-    UNKNOWN = "unknown"
+    UNKNOWN = "UNKNOWN"
     STATEMENT = "statement"
-    RECEIPT = "receipt"
-    INVESTMENT = "invest"
-    FUND = "fund"
+    RECEIPT = "recibo"
+    INVESTMENT = "inversio"
+    FUND = "fons"
     DEBIT = "debit"
-    SUMMARY = "summary"
-    MOVEMENTS = "movements"
+    SUMMARY = "resumen"
+    MOVEMENTS = "extracto"
+    MORTGAGE = "hipoteca"
+    TRANSFER = "transferencia"
+    INSURANCE = "seguros"
 
 
 @dataclass

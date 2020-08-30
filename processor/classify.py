@@ -36,7 +36,6 @@ from pdfminer.layout import (
 )
 from pdfminer.converter import PDFPageAggregator
 
-from parsing.common import find_starting_with
 from parsing.metadata import DocumentMetadata, unclassified
 from banks.deutsche_bank_es import DeutscheBankDocuments
 
@@ -100,25 +99,21 @@ def convert_to_lines(page: LTComponent):
 # parsing of specific well known pdf document templates
 
 
-def analyse(pages) -> DocumentMetadata:
+def analyse(pdf_file_name: str, pages) -> DocumentMetadata:
     """Given a PDF document that has been parsed into Page entities, produce
     classification metadata"""
 
-    deutsche = DeutscheBankDocuments()
+    bank_classes = [DeutscheBankDocuments]
 
-    page: LTPage
-    for page in pages:
-        lines = convert_to_lines(page)
-        if find_starting_with(lines, "ADEUDO POR DOMICILIACIÓN SEPA"):
-            return deutsche.debit(lines)
-        if "EXTRACTE INTEGRAT DB" in lines:
-            return deutsche.extracto_integrado(lines)
-        if "DWS AHORRO F.I." in lines and find_starting_with(lines, "PERFIL DE RISC"):
-            return deutsche.perfil_inversor(lines)
-        if find_starting_with(lines, "ESTAT DE POSICIÓ DE FONS D' INVERSIÓ."):
-            return deutsche.estat_inversio(lines)
-        if find_starting_with(lines, "EXTRACTO CUENTA NOMINA BANCA ASOCIADA DB"):
-            return deutsche.extracto_cuenta(lines)
+    for bank_class in bank_classes:
+        bank_parser = bank_class()
+        page: LTPage
+        for page in pages:
+            lines = convert_to_lines(page)
+            metadata = bank_parser.process(pdf_file_name, page, lines)
+            if metadata:
+                return metadata
+
     return unclassified(lines)
 
 
@@ -181,8 +176,8 @@ def main(files):
         for pdf_file in find_pdfs(file_or_folder):
             try:
                 pages = extract_pages(pdf_file)
-                print(f"Processing {pdf_file}")
-                metadata = analyse(pages)
+                print(f"Processing {pdf_file}", end="\t")
+                metadata = analyse(pdf_file, pages)
 
                 folder = metadata.period_start_date.strftime("%Y")
                 file_name = (
@@ -191,12 +186,22 @@ def main(files):
                 )
                 if metadata.entity:
                     file_name += f" {metadata.entity}"
-                # if metadata.extra_info:
-                #     file_name += f" {metadata.extra_info}"
+                if metadata.extra_info:
+                    file_name += f" {unidecode(metadata.extra_info.lower())}"
                 file_name += ".pdf"
                 # replace non ascii chars
-                file_name = unidecode(file_name)
-                print(f"       --> {folder}/{file_name}")
+                file_name = (
+                    unidecode(file_name)
+                    .replace("/", ".")
+                    .replace(":", " ")
+                    .replace("(", " ")
+                    .replace(")", " ")
+                    .replace(",", " ")
+                    .replace("..", ".")
+                    .replace("  ", " ")
+                    .strip()
+                )
+                print(f"--> {folder}/{file_name}")
             except Exception as exc:  # noqa: E0602
                 errors.append(f"{pdf_file}: {exc}")
                 raise exc
