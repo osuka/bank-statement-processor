@@ -1,3 +1,6 @@
 venv/
+.venv/
+samples/
 correspond*pdf
 .DS_*
+__pycache__

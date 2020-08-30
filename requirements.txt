@@ -1,4 +1,9 @@
 pdfminer.six
 chardet
+unidecode
+
+# dev
 pylint
 ipython
+black
+pytest
