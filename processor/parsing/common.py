@@ -4,6 +4,24 @@ PDFs.
 """
 
 from datetime import datetime
+from functools import reduce
+import dateparser
+
+
+def parse_date_es_ca(text: str):
+    """parses a string into a date, trying dd.mm.yy, dd.mm.yyyy and other combinations """
+    date = dateparser.parse(text, languages=["ca", "es"])
+    if date:
+        return date
+    raise ValueError(f"not a date: {text}")
+
+
+def contains_all(text, containee):
+    """Returns true if the containee value or values exist in the provided text. Containe can
+    be a string or a list of strings. If it's a list, all of them have to be contained."""
+    if not isinstance(containee, list):
+        return containee in text
+    return reduce(lambda result, value: result and (value in text), containee, True)
 
 
 def find_starting_with(lines, prefix):
@@ -19,10 +37,10 @@ def find_starting_with(lines, prefix):
 
 def find_containing(lines, text):
     """finds inside array of strings the first one that contains the given
-    string
+    string. If text is a list of strings then it finds one that contains all of them
     """
     for line in lines:
-        if text in line:
+        if contains_all(line, text):
             return line
     return None
 

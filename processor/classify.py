@@ -6,38 +6,39 @@ makes them easier to classify
 
 # python style conventions https://www.python.org/dev/peps/pep-0008/
 
-import os
 import argparse
+import os
 import re
+from functools import reduce
 from typing import List
 
+from pdfminer.converter import PDFPageAggregator
+from pdfminer.layout import (
+    LAParams,
+    LTAnno,
+    LTChar,
+    LTComponent,
+    LTContainer,
+    LTCurve,
+    LTImage,
+    LTLine,
+    LTPage,
+    LTRect,
+    LTTextBoxHorizontal,
+    LTTextBoxVertical,
+)
+from pdfminer.pdfdevice import PDFDevice
+from pdfminer.pdfdocument import PDFDocument
+from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
+from pdfminer.pdfpage import PDFPage
+from pdfminer.pdfparser import PDFParser
 from unidecode import unidecode
+
+from banks.deutsche_bank_es import DeutscheBankDocuments
+from parsing.metadata import DocumentMetadata
 
 # PDFMINER guide in
 # https://www.unixuser.org/~euske/python/pdfminer/programming.html
-
-from pdfminer.pdfparser import PDFParser
-from pdfminer.pdfdocument import PDFDocument
-from pdfminer.pdfpage import PDFPage
-from pdfminer.pdfinterp import PDFResourceManager
-from pdfminer.pdfinterp import PDFPageInterpreter
-from pdfminer.pdfdevice import PDFDevice
-from pdfminer.layout import (
-    LAParams,
-    LTPage,
-    LTComponent,
-    LTTextBoxHorizontal,
-    LTContainer,
-    LTImage,
-    LTChar,
-    LTRect,
-    LTLine,
-    LTAnno,
-)
-from pdfminer.converter import PDFPageAggregator
-
-from parsing.metadata import DocumentMetadata, unclassified
-from banks.deutsche_bank_es import DeutscheBankDocuments
 
 
 def find_pdfs(root):
@@ -45,16 +46,12 @@ def find_pdfs(root):
     if os.path.isfile(root):
         if root.endswith(".pdf"):
             yield root
-        else:
-            print(f"{root}: not a pdf file")
         return
 
     for (dirpath, _, files) in os.walk(root):
         for file_name in files:
             if file_name.endswith(".pdf"):
                 yield os.path.join(dirpath, file_name)
-            else:
-                print(f"{file_name}: not a pdf file")
 
 
 def clean_line(line):
@@ -70,21 +67,22 @@ def clean_line(line):
 def convert_to_lines(page: LTComponent):
     """converts a container form pdfminer into a set of lines of text"""
     lines = []
+    ignorable_elements = [LTImage, LTRect, LTLine, LTCurve]
+    text_elements = [LTTextBoxHorizontal, LTChar, LTAnno, LTTextBoxVertical]
+    container_elements = [LTContainer]
+
     for element in page:
-        if (
-            isinstance(element, LTTextBoxHorizontal)
-            or isinstance(element, LTChar)
-            or isinstance(element, LTAnno)
-        ):
+
+        def is_one_of(previous, element_class):
+            return previous or isinstance(
+                element, element_class  # pylint: disable=cell-var-from-loop
+            )
+
+        if reduce(is_one_of, text_elements, False):
             lines.append(clean_line(element.get_text()))
-        elif isinstance(element, LTContainer):
+        elif reduce(is_one_of, container_elements, False):
             lines += convert_to_lines(element)
-        elif (
-            isinstance(element, LTImage)
-            or isinstance(element, LTRect)
-            or isinstance(element, LTLine)
-            or isinstance(element, LTAnno)
-        ):
+        elif reduce(is_one_of, ignorable_elements, False):
             pass
         else:
             raise Exception(f"Type is {type(element)}")
@@ -114,7 +112,7 @@ def analyse(pdf_file_name: str, pages) -> DocumentMetadata:
             if metadata:
                 return metadata
 
-    return unclassified(lines)
+    return None
 
 
 def extract_pages(pdf_file_name: str) -> List[LTPage]:
@@ -136,11 +134,11 @@ def extract_pages(pdf_file_name: str) -> List[LTPage]:
         # https://pdfminersix.readthedocs.io/en/latest/reference/composable.html
         laparams = LAParams(
             line_overlap=0.5,
-            char_margin=2.0,
+            # char_margin=2.0,
             line_margin=1.5,
-            word_margin=0.1,
+            # word_margin=0.1,
             # boxes_flow=None,
-            detect_vertical=True,
+            # detect_vertical=True,
             all_texts=True,
         )
 
@@ -172,14 +170,21 @@ def main(files):
     and rename them into a structure
     """
     errors = []
+    last_folder = ""
     for file_or_folder in files:
         for pdf_file in find_pdfs(file_or_folder):
             try:
                 pages = extract_pages(pdf_file)
-                print(f"Processing {pdf_file}", end="\t")
+                if last_folder != os.path.dirname(pdf_file):
+                    last_folder = os.path.dirname(pdf_file)
+                    print(f"\nin {last_folder}:\n")
+                print(f"{os.path.basename(pdf_file)} = ", end="")
                 metadata = analyse(pdf_file, pages)
 
-                folder = metadata.period_start_date.strftime("%Y")
+                if not metadata:
+                    print(f"--> UNKNOWN")
+                    continue
+
                 file_name = (
                     f"{metadata.period_start_date.strftime('%Y.%m.%d')} {metadata.bank.value} "
                     f"{metadata.classification.value}"
@@ -198,10 +203,10 @@ def main(files):
                     .replace(")", " ")
                     .replace(",", " ")
                     .replace("..", ".")
-                    .replace("  ", " ")
                     .strip()
                 )
-                print(f"--> {folder}/{file_name}")
+                file_name = " ".join(file_name.split())  # removes multiple spaces
+                print(f"{file_name}")
             except Exception as exc:  # noqa: E0602
                 errors.append(f"{pdf_file}: {exc}")
                 raise exc

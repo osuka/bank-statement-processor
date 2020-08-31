@@ -18,10 +18,12 @@ class Bank(Enum):
     OPENBANK = "openbank"
 
 
-class Classification(Enum):
+class DocType(Enum):
     """ Known document subjects """
 
     UNKNOWN = "UNKNOWN"
+    NOTE = "aviso"
+    FISCAL = "fiscal"
     STATEMENT = "statement"
     RECEIPT = "recibo"
     INVESTMENT = "inversio"
@@ -40,23 +42,7 @@ class DocumentMetadata:
 
     period_start_date: datetime
     bank: Bank
-    classification: Classification
+    classification: DocType
     entity: str  # name of entity debited, originating, etc
     extra_info: str  # eg policy id, notes, etc that should go on the name
     period_end_date: datetime = None
-
-
-def unclassified(
-    lines: List[str] = None,  # pylint: disable=unused-argument
-) -> DocumentMetadata:
-    """When a document can't be identified it will need manual revision - we
-    store them under the same bogus date"""
-
-    return DocumentMetadata(
-        period_start_date=datetime(2000, 1, 1),
-        period_end_date=None,
-        bank=Bank.UNKNOWN,
-        classification=Classification.UNKNOWN,
-        entity="",
-        extra_info="",
-    )

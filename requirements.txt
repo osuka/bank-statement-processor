@@ -1,6 +1,7 @@
 pdfminer.six
 chardet
 unidecode
+dateparser
 
 # dev
 pylint
