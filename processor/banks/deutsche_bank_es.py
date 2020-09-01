@@ -3,7 +3,6 @@ Parsing for the documents received from the entity Deutsche Bank ES
 """
 
 import re
-from dataclasses import dataclass
 from datetime import datetime
 from typing import List
 
@@ -11,15 +10,14 @@ import dateparser
 from pdfminer.layout import LTPage
 
 from parsing.common import (
-    contains_all,
     find_containing,
     find_starting_with,
     parse_date_es_ca,
 )
-from parsing.metadata import Bank, DocType, DocumentMetadata
+from parsing.metadata import Bank, DocType, DocumentMetadata, Adjustment, Filing
 
 
-def find_date(lines):  # noqa: E0602
+def find_date(lines):
     """finds the first string that matches the pattern "DATA \n02.01.18"
     or "DATA,11/05/2018" or "FECHA\n11/05/2018" and returns a date object with the given date
     """
@@ -85,7 +83,7 @@ def find_date(lines):  # noqa: E0602
                     return date
                 raise Exception(f"Confusing date:\n\n{line}\n\n - check and fix code!")
             elif re.match(
-                r"^(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Octubre|Noviembre|Diciembre) de \d{2,4}\n",
+                r"^(Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Octubre|Noviembre|Diciembre) de \d{2,4}\n",  # pylint: disable=line-too-long
                 line,
             ):
                 date = parse_date_es_ca(line.split("\n")[0])
@@ -104,29 +102,6 @@ def find_date(lines):  # noqa: E0602
     return None
 
 
-@dataclass
-class Adjustment:
-    """ Tweaks the final metadata to make it more manageable as file names """
-
-    entity: str = None
-    extra_info: str = None
-    new_entity: str = None
-    new_extra_info: str = None
-
-    def adjust(self, metadata: DocumentMetadata):
-        """ modifies in-place the metadata according to the rules in this adjustment """
-        if self.entity and contains_all(metadata.entity, self.entity):
-            if not self.extra_info or (
-                self.extra_info and contains_all(metadata.extra_info, self.extra_info)
-            ):
-                if self.new_extra_info:
-                    metadata.extra_info = self.new_extra_info
-                if self.new_entity:
-                    metadata.entity = self.new_entity
-                return True
-        return False
-
-
 def adjust_names(metadata: DocumentMetadata):
     """issuer and concept can be rather long so we generate shorter aliases
     purely by convention"""
@@ -140,6 +115,7 @@ def adjust_names(metadata: DocumentMetadata):
         Adjustment("ZURICH VIDA", "300002290", "zurich", "vida 300002290"),
         Adjustment("ZURICH VIDA", "300002289", "zurich", "vida 300002289"),
         Adjustment("AQUALOGY", None, "agua", "contador"),
+        Adjustment("ENDESA ENERGIA", "ELECTRICIDAD", "endesa", "electricidad"),
         Adjustment("AIGUES DE BARCELONA", None, "agua", "suministro"),
         Adjustment("AJUNTAMENT DE BARCELONA", "IBI", "ajuntament", "ibi ciencies"),
         Adjustment(
@@ -154,39 +130,6 @@ def adjust_names(metadata: DocumentMetadata):
     for adjustment in adjustments:
         if adjustment.adjust(metadata):
             return
-
-
-@dataclass
-class Filing:
-    """Filing actions. Give a condition it sets class, entity and info to set values
-    must_contain:
-      a string: applies if the string is contained in any line in the document, in full, case sensitive
-      a list: applies if all conditions in list are met, see below
-        element in list is string: appies if there is one line that contains the string
-        element in list is a list of strings: applies if there is a line that contains all the strings
-                                              in the sublist, in full, case sensitive, order irrelevant
-    """
-
-    must_contain: List[str]
-    classification: DocType
-    entity: str = ""
-    extra_info: str = ""
-
-    def applies(self, lines):
-        """ checks if the conditions for this filing action apply """
-        if not self.must_contain:
-            return False
-
-        if isinstance(self.must_contain, list):
-            # all conditions on the list must pass
-            for condition in self.must_contain:
-                # find containing accepts condition=str and condition=List[str]
-                if not find_containing(lines, condition):
-                    return False
-            return True
-
-        # a simple string check
-        return find_containing(lines, self.must_contain)
 
 
 class DeutscheBankDocuments:
@@ -369,8 +312,8 @@ class DeutscheBankDocuments:
         ),
         Filing(["EXTRACTO FISCAL DB", "aro\nRut"], DocType.FISCAL, "extracto", "1"),
         Filing(["EXTRACTE FISCAL DB", "aro\nRut"], DocType.FISCAL, "extracto", "1"),
-        Filing(["EXTRACTO FISCAL DB", "az\nOscar"], DocType.FISCAL, "extracto", "2"),
-        Filing(["EXTRACTE FISCAL DB", "az\nOscar"], DocType.FISCAL, "extracto", "2"),
+        Filing(["EXTRACTO FISCAL DB", "az\nOsc"], DocType.FISCAL, "extracto", "2"),
+        Filing(["EXTRACTE FISCAL DB", "az\nOsc"], DocType.FISCAL, "extracto", "2"),
     ]
 
     def process(
@@ -464,7 +407,7 @@ class DeutscheBankDocuments:
             or not cuenta
             or not emisor_id
             or not date
-        ):  # noqa: E303
+        ):
             raise Exception("Error: document detected as 'debit' can't be parsed")
 
         metadata = DocumentMetadata(

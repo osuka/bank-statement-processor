@@ -35,6 +35,7 @@ from pdfminer.pdfparser import PDFParser
 from unidecode import unidecode
 
 from banks.deutsche_bank_es import DeutscheBankDocuments
+from banks.santander_uk import SantanderUKBankDocuments
 from parsing.metadata import DocumentMetadata
 
 # PDFMINER guide in
@@ -101,13 +102,12 @@ def analyse(pdf_file_name: str, pages) -> DocumentMetadata:
     """Given a PDF document that has been parsed into Page entities, produce
     classification metadata"""
 
-    bank_classes = [DeutscheBankDocuments]
+    bank_parsers = [DeutscheBankDocuments(), SantanderUKBankDocuments()]
 
-    for bank_class in bank_classes:
-        bank_parser = bank_class()
-        page: LTPage
-        for page in pages:
-            lines = convert_to_lines(page)
+    page: LTPage
+    for page in pages:
+        lines = convert_to_lines(page)
+        for bank_parser in bank_parsers:
             metadata = bank_parser.process(pdf_file_name, page, lines)
             if metadata:
                 return metadata
@@ -182,7 +182,7 @@ def main(files):
                 metadata = analyse(pdf_file, pages)
 
                 if not metadata:
-                    print(f"--> UNKNOWN")
+                    print("--> UNKNOWN")
                     continue
 
                 file_name = (

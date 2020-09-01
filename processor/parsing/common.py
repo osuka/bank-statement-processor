@@ -16,6 +16,14 @@ def parse_date_es_ca(text: str):
     raise ValueError(f"not a date: {text}")
 
 
+def parse_date_gb(text: str):
+    """parses a string into a date, trying dd.mm.yy, dd.mm.yyyy and other combinations """
+    date = dateparser.parse(text, languages=["en"], region="gb")
+    if date:
+        return date
+    raise ValueError(f"not a date: {text}")
+
+
 def contains_all(text, containee):
     """Returns true if the containee value or values exist in the provided text. Containe can
     be a string or a list of strings. If it's a list, all of them have to be contained."""
