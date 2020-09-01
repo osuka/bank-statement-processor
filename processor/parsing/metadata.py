@@ -17,6 +17,7 @@ class Bank(Enum):
     MONZON = "monzo"
     FIRST_DIRECT = "firstdirect"
     OPENBANK = "openbank"
+    CITIBANK_UK = "citibank"
 
 
 class DocType(Enum):

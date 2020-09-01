@@ -1,26 +1,25 @@
 """
-Parsing for the documents received from the entity Deutsche Bank ES
+Parsing for the documents received from the entity Santander UK
 """
 
 import re
-from datetime import datetime
 from typing import List
 
 from pdfminer.layout import LTPage
 
-from parsing.common import find_containing, find_starting_with, parse_date_gb
+from parsing.common import find_containing, parse_date_gb
 from parsing.metadata import Bank, DocType, DocumentMetadata, Filing
 
 known_date_regexes = [
     # 5th Mar 2018 to 4th Apr 2018
-    # 29th Oct 2013 to 2nd May 2014'
+    # 29th Oct 2013 to 2nd May 2014
     re.compile(
-        r".*[0-9thndst]+ (?:Jan|Feb|Mar|May|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} to (?P<date>[0-9thndst]+ (?:Jan|Feb|Mar|May|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}).*",
+        r".*[0-9thndst]+ (?:Jan|Feb|Mar|May|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} to (?P<date>[0-9thndst]+ (?:Jan|Feb|Mar|May|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}).*",  # pylint: disable=line-too-long
         re.MULTILINE | re.DOTALL,
     ),
     # 5th Mar 2018to 4th Apr 2018  (some documents actually have this)
     re.compile(
-        r".*(?:Jan|Feb|Mar|May|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}to (?P<date>.* (?:Jan|Feb|Mar|May|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}).*",
+        r".*(?:Jan|Feb|Mar|May|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}to (?P<date>.* (?:Jan|Feb|Mar|May|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4}).*",  # pylint: disable=line-too-long
         re.MULTILINE | re.DOTALL,
     ),
     # blahblah\nFrom 01/07/2018 to 30/06/2019\nblah blabh
@@ -31,7 +30,7 @@ known_date_regexes = [
     # 'blahblah6 April 2018 to 5 April 2019blahblah
     # 'blahblah6 April 2018 - 5 April 2019blahblah
     re.compile(
-        r".*(?:January|February|March|May|April|June|July|August|September|October|November|December) \d{4} (?:to|-) (?P<date>.* (?:January|February|March|May|April|June|July|August|September|October|November|December) \d{4}).*",
+        r".*(?:January|February|March|May|April|June|July|August|September|October|November|December) \d{4} (?:to|-) (?P<date>.* (?:January|February|March|May|April|June|July|August|September|October|November|December) \d{4}).*",  # pylint: disable=line-too-long
         re.MULTILINE | re.DOTALL,
     ),
     # Date:\n 11-02-2014
