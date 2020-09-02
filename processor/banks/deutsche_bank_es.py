@@ -319,7 +319,7 @@ class DeutscheBankDocuments:
     def process(
         self,
         file_name: str,  # pylint: disable=unused-argument
-        page: LTPage,  # pylint: disable=unused-argument
+        pages: LTPage,  # pylint: disable=unused-argument
         lines: List[str],
     ) -> DocumentMetadata:
         """check if the document is from this entity, classify it if so

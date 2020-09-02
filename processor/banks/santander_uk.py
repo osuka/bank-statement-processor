@@ -55,7 +55,7 @@ def find_date(lines):
 
 
 class SantanderUKBankDocuments:
-    """ Parsers for all the PDF documents from Deutsche Bank ES known """
+    """ Parsers for all the PDF documents """
 
     simple_mappings = [
         Filing(
@@ -104,7 +104,7 @@ class SantanderUKBankDocuments:
     def process(
         self,
         file_name: str,  # pylint: disable=unused-argument
-        page: LTPage,  # pylint: disable=unused-argument
+        pages: LTPage,  # pylint: disable=unused-argument
         lines: List[str],
     ) -> DocumentMetadata:
         """check if the document is from this entity, classify it if so

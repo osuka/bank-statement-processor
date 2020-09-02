@@ -42,7 +42,7 @@ def find_date(lines):
 
 
 class CitibankUKBankDocuments:
-    """ Parsers for all the PDF documents from Deutsche Bank ES known """
+    """ Parsers for all the known PDF documents """
 
     simple_mappings = [
         Filing(["Relationship report for"], DocType.STATEMENT, "current", "summary"),
@@ -57,7 +57,7 @@ class CitibankUKBankDocuments:
     def process(
         self,
         file_name: str,  # pylint: disable=unused-argument
-        page: LTPage,  # pylint: disable=unused-argument
+        pages: LTPage,  # pylint: disable=unused-argument
         lines: List[str],
     ) -> DocumentMetadata:
         """check if the document is from this entity, classify it if so

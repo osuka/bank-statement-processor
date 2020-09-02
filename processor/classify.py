@@ -37,6 +37,7 @@ from unidecode import unidecode
 from banks.deutsche_bank_es import DeutscheBankDocuments
 from banks.santander_uk import SantanderUKBankDocuments
 from banks.citibank_uk import CitibankUKBankDocuments
+from banks.first_direct_uk import FirstDirectUKBankDocuments
 from parsing.metadata import DocumentMetadata
 
 # PDFMINER guide in
@@ -107,15 +108,19 @@ def analyse(pdf_file_name: str, pages) -> DocumentMetadata:
         DeutscheBankDocuments(),
         SantanderUKBankDocuments(),
         CitibankUKBankDocuments(),
+        FirstDirectUKBankDocuments(),
     ]
 
-    page: LTPage
-    for page in pages:
-        lines = convert_to_lines(page)
-        for bank_parser in bank_parsers:
-            metadata = bank_parser.process(pdf_file_name, page, lines)
-            if metadata:
-                return metadata
+    # join all the pages of the document
+    lines = []
+    for subset in [convert_to_lines(page) for page in pages]:
+        for element in subset:
+            lines.append(element)
+
+    for bank_parser in bank_parsers:
+        metadata = bank_parser.process(pdf_file_name, pages, lines)
+        if metadata:
+            return metadata
 
     return None
 
